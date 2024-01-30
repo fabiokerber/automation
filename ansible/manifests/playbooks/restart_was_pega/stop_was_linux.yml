@@ -1,0 +1,104 @@
+---
+
+- name: SELF-HEALING REALIZA STOP DOS SERVIÇOS WAS DOS SERVIDORES LINUX
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: "Verifica Servers do Alerta"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep '{{ item }}'"
+  register: verifica_servers
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_servers
+
+- name: "KILL -3 do PID das JVMs do Alerta"
+  shell: "kill -3 $(ps -ef | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | grep {{ item }} | awk '{print $2}')"
+  register: kill_was_dump
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: kill_was_dump
+
+- name: "KILL -9 do PID das JVMs do Alerta"
+  shell: "kill -9 $(ps -ef | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | grep {{ item }} | awk '{print $2}')"
+  register: kill_was
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: kill_was
+
+- pause:
+    seconds: 20
+
+- name: "Status JVMs"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep '{{ item }}'"
+  register: verifica_servers
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_servers
+
+- name: "Limpa Temp"
+  shell: "sudo /etc/init.d/./cleartempPEGA"
+  ignore_errors: yes
+  become: true
+  register: clear_bpm
+- debug:
+    var: clear_bpm
+
+- name: "Sync Caches"
+  shell: "sudo sync"
+  ignore_errors: yes
+  become: true
+  register: sync_caches
+- debug:
+    var: sync_caches
+
+- name: "Drop Caches"
+  shell: "sudo echo 3 > /proc/sys/vm/drop_caches"
+  ignore_errors: yes
+  become: true
+  register: drop_caches
+- debug:
+    var: drop_caches
+
+- set_fact:
+    msg_result: "AWX:DATA:SUCCESS= Serviço(s) WAS paralizados(s) com sucesso no hostname {{ hostname }}"
+  with_sequence: start=0 end="{{ verifica_servers['results'] | length - 1}}"
+  when: "{{ verifica_servers['results'][item|int]['stdout'] | lenght }} == 0"
+
+- set_fact:
+    msg_result: "AWX:DATA:SUCCESS= Foi executado o comando de STOP, mas a(s) JVM(s) foram iniciadas automaticamente no hostname {{ hostname }}"
+  with_sequence: start=0 end="{{ verifica_servers['results'] | length - 1}}"
+  when: "{{ verifica_servers['results'][item|int]['stdout'] | lenght }} != 0"
+
+- name: SET STAT MSG RESULT SUCCESS
+  set_stats:
+    data:
+      msg_result_stats: "{{ msg_result }}"
+
+- name: MSG RESULT SUCCESS
+  debug:
+    msg: "{{ msg_result }}"
+- set_fact:
+    return_code: 'true'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- debug:
+    var: ansible_failed_result
+
+- name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+  set_fact:
+    msg_result: "Falha na paralização dos servicos WAS no hostname {{ hostname }}"
+  when: msg_result is not defined
+
+- fail:
+    msg: '{{ msg_result }}'
+- set_fact:
+    return_code: 'false'

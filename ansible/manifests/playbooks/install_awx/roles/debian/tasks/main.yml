@@ -1,0 +1,136 @@
+---
+
+- name: DEBIAN | Update system
+  ansible.builtin.apt:
+    name: "*"
+    state: latest
+
+- name: DEBIAN | Install common packages
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: latest
+
+- name: DEBIAN | Check OpenSSL Version
+  ansible.builtin.shell: "openssl version | awk '{print $2}'"
+  register: opensslversion
+
+- name: DEBIAN | Show OpenSSL Version
+  debug:
+    msg: "OpenSSL Version is {{ opensslversion.stdout }}"
+
+- name: DEBIAN | Download openssl v1.1.1
+  ansible.builtin.unarchive:
+    src: https://ftp.openssl.org/source/openssl-1.1.1p.tar.gz
+    dest: /tmp/
+    remote_src: yes
+    validate_certs: no
+  when: opensslversion.stdout != "1.1.1p"
+
+- name: DEBIAN | Install openssl v1.1.1
+  ansible.builtin.shell: "./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic"
+  args:
+    chdir: /tmp/openssl-1.1.1p/
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+  when: opensslversion.stdout != "1.1.1p"
+
+- name: DEBIAN | Config and install openssl v1.1.1 - Step 1
+  ansible.builtin.shell: "make"
+  args:
+    chdir: /tmp/openssl-1.1.1p/
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+  when: opensslversion.stdout != "1.1.1p"
+
+- name: DEBIAN | Config and install openssl v1.1.1 - Step 2
+  ansible.builtin.shell: "make install"
+  args:
+    chdir: /tmp/openssl-1.1.1p/
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+  when: opensslversion.stdout != "1.1.1p"
+
+- name: DEBIAN | Config and install openssl v1.1.1 - Step 3
+  ansible.builtin.shell: "echo 'export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64' >> ~/.bashrc"
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+  when: opensslversion.stdout != "1.1.1p"
+
+- name: AWX | Install/Configure K3s
+  ansible.builtin.shell: "curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644"
+  ignore_errors: yes
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+
+- name: AWX | Create folders 
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+    - /usr/local/src/awx-operator
+    - /usr/local/src/awx-on-k3s
+    - /data/postgres
+    - /data/projects
+
+- name: AWX | Clone repo AWX-OPERATOR
+  ansible.builtin.git:
+    repo: 'https://github.com/ansible/awx-operator.git'
+    dest: /usr/local/src/awx-operator
+    version: 0.23.0
+
+- name: AWX | Clone repo AWX-ON-K3S
+  ansible.builtin.git:
+    repo: 'https://github.com/kurokobo/awx-on-k3s.git'
+    dest: /usr/local/src/awx-on-k3s
+
+- name: AWX | Deploy awx-operator
+  ansible.builtin.shell: make deploy
+  args:
+    chdir: /usr/local/src/awx-operator
+  environment:
+    NAMESPACE: awx
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+
+- name: AWX | Create certificate
+  ansible.builtin.shell: openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -out ./base/tls.crt -keyout ./base/tls.key -subj "/CN=${AWX_HOST}/O=${AWX_HOST}" -addext subjectAltName="DNS:${AWX_HOST}"
+  args:
+    chdir: /usr/local/src/awx-on-k3s
+  environment:
+    AWX_HOST: "{{ host }}"
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+
+- name: AWX | Set hostname
+  ansible.builtin.lineinfile:
+    path: /usr/local/src/awx-on-k3s/base/awx.yaml
+    regexp: 'hostname: awx.example.com'
+    line: '  hostname: "{{ host }}"'
+
+- name: AWX | Change permission /data/projects
+  ansible.builtin.file:
+    path: /data/projects
+    owner: 1000
+    group: 0
+
+- name: AWX | Deploy awx-on-k3s
+  ansible.builtin.shell: kubectl apply -k /usr/local/src/awx-on-k3s/base
+  environment:
+    NAMESPACE: awx
+  become_method: su
+  become_exe: sudo su -
+  become_user: root
+
+- name: AWX | Pause for 30 mins to wait end of deploy
+  pause:
+    minutes: 30
+
+...

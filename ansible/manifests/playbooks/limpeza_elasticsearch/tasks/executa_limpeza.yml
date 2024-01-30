@@ -1,0 +1,37 @@
+---
+
+- name: Executa limpeza
+
+# -------------------------------------------------------------------------------------
+  block:
+# -------------------------------------------------------------------------------------
+
+    - name: "Executa limpeza mantendo apenas dados dos ultimos {{ days }} dias no servidor {{ hostname }}"
+      shell: /opt/elasticsearch-curator/curator-cli --host {{ hostname }}:9200 delete_indices --ignore_empty_list --filter_list '[{"filtertype":"age","source":"creation_date","direction":"older","unit":"days","unit_count":{{ days }},{"filtertype":"pattern","kind":"regex","value":".*kibana","exclude":"True"}]' ; env
+      environment:
+        LANG: en_US.utf-8
+        LC_ALL: en_US.utf-8
+      become: yes
+      register: status_limpeza
+      ignore_errors: no
+
+    - set_fact:
+        msg_result: "AWX:DATA:SUCESS=Realizada a limpeza dos dados no servidor {{ hostname }} mantendo apenas os ultimos {{ days }} dias."
+
+    - set_fact:
+        return_code: 'true'
+
+# -------------------------------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------------------------------
+
+    - set_fact:
+        msg_result: "AWX:ERROR:MSG=Falha ao realizar a limpeza dos dados no servidor {{ hostname }}."
+
+    - fail:
+        msg: "{{ msg_result }}"
+
+    - set_fact:
+        return_code: 'false'
+
+...

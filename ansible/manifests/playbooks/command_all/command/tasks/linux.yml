@@ -1,0 +1,84 @@
+---
+
+- name: SERVIDOR LINUX
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: EXECUÇÃO COMANDO 1
+  shell: "{{ comando1 }}" #recebe como payload
+  ignore_errors: "{{ ignore_error_1 | default('ignore_error_1', false) }}" #recebe como payload
+  register: comando_saida_linux_1
+
+- debug:
+    var: comando_saida_linux_1
+
+- pause:
+    seconds: "{{ pause1 }}" #recebe como payload
+
+- name: EXECUÇÃO COMANDO 2
+  shell: "{{ comando2 }}" #recebe como payload
+  when: comando2 | length != 0
+  ignore_errors: "{{ ignore_error_2 | default('ignore_error_2', false) }}" #recebe como payload
+  register: comando_saida_linux_2
+
+- debug:
+    var: comando_saida_linux_2
+
+- pause:
+    seconds: "{{ pause2 }}" #recebe como payload
+
+- name: EXECUÇÃO COMANDO 3
+  shell: "{{ comando3 }}" #recebe como payload
+  when: comando3 | length != 0
+  ignore_errors: "{{ ignore_error_3 | default('ignore_error_3', false) }}" #recebe como payload
+  register: comando_saida_linux_3
+
+- debug:
+    var: comando_saida_linux_3
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS={{ result.changes|default(result.results) }}"
+  when: result is defined
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS=Comando executado com sucesso"
+  when: (result is not defined)
+
+- name: SET STAT MSG RESULT SUCCESS
+  set_stats:
+    data:
+      msg_result_stats: "{{ msg_result }}"
+
+- name: MSG RESULT SUCCESS
+  debug:
+    msg: "{{ msg_result }}"
+
+- set_fact:
+    return_code: 'true'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - name: SET FACT MSG RESULT FAILED
+      set_fact:
+        msg_result: "AWX:ERROR:MSG=TASK: {{ ansible_failed_task|json_query(query_name) }} - MSG: {{ ansible_failed_result|json_query(query_msg) }}"
+      vars:
+        query_name: "name"
+        query_msg: "msg"
+
+    - debug:
+        var: msg_result
+
+    - name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+      set_fact:
+        msg_result: "Comando executado com erro"
+      when: msg_result is not defined
+
+    - fail:
+        returne_code: 'false'
+        msg: '{{ msg_result }}'

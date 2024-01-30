@@ -1,0 +1,26 @@
+---
+
+- name: "PLAYBOOK SH-SO-REMOVE-FS-FILES-MULTI - LINUX"
+  hosts: "{{ hostname | lower }}"
+  gather_facts: false
+  vars_files:
+    - vars/hosts_linux.yml
+  become: true
+  tasks:
+    - name: REMOVE FS FILES - LINUX
+      include_tasks: tasks/linux/remove_fs_linux.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+
+- name: "PLAYBOOK SH-SO-REMOVE-FS-FILES-MULTI - WINDOWS"
+  hosts: "{{ hostname | lower }}"
+  gather_facts: false
+  vars_files:
+    - vars/hosts_windows.yml
+  become: true
+  tasks:
+    - name: REMOVE FS FILES - WINDOWS
+      include_tasks: tasks/windows/remove_fs_windows.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'Windows') or (platform is defined and platform == 'Windows') or (platform is defined and platform == 'Wintel')
+

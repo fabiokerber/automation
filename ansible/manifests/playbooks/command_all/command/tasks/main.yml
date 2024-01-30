@@ -1,0 +1,38 @@
+---
+
+- name: VERIFICA PLATAFORMA
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: VERIFICA SE PLATAFORMA LINUX
+  include_tasks: linux.yml
+  when: platform == 'Linux'
+
+- name: VERIFICA SE PLATAFORMA WINDOWS
+  include_tasks: windows.yml
+  when: platform == 'Wintel'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - name: SET FACT MSG RESULT FAILED
+      set_fact:
+        msg_result: "AWX:ERROR:MSG=TASK: {{ ansible_failed_task|json_query(query_name) }} - MSG: {{ ansible_failed_result|json_query(query_msg) }}"
+      vars:
+        query_name: "name"
+        query_msg: "msg"
+
+    - debug:
+        var: msg_result
+
+    - name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+      set_fact:
+        msg_result: "FALHA NA VERIFICAÇÃO DA PLATAFORMA"
+      when: msg_result is not defined
+
+    - fail:
+        returne_code: 'false'
+        msg: '{{ msg_result }}'

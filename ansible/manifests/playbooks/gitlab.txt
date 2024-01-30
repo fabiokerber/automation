@@ -1,0 +1,19 @@
+1. New Merge Request
+    Criação da Regra L0020 - REQ00000000000000 (2x)
+
+2. Tags > New tag > Master para nova tag, exemplo v3.22.0
+    Tag name: v3.22.0
+
+    Segundo Campo:
+    ### 06/10/2021 - v3.22.0 - Fábio Kerber
+
+    ** Atualização **
+
+    * Atendimento a(s) REQ(s):
+    - REQ00000000000000
+
+3. Atualiza Projeto id:2168
+    "Get latest SCM revision"
+
+4. Altera Template Tower id:2169
+    Campo "SCM BRANCH"

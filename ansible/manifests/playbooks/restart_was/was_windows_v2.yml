@@ -1,0 +1,155 @@
+---
+
+- name: SELF-HEALING REALIZA RESTART DOS SERVIÇOS WAS DOS SERVIDORES WINDOWS
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: "STOP JVM WAS - By Command Line"
+  win_command: "stopServer.bat {{ item }}"
+  register: recycle_stop_log
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+  when: "{{ servers_alerta|length }} != 0"
+  args:
+    chdir: "{{ was_install_location }}/profiles/{{ profile_name }}/bin"
+- debug:
+    var: recycle_stop_log
+
+- name: "STOP JVM WAS - By Win Service"
+  win_shell: $Obj = (Get-WmiObject Win32_Service | Where {$_.StartMode -eq 'Disabled'}); Foreach ($service in @(Get-Service -ServiceName 'IBMWAS*' -Exclude $Obj ).Name){Stop-Service -Name $service}; $arrService = Get-Service -ServiceName 'IBMWAS*''; $arrService.Status
+  register: start_was
+  ignore_errors: yes
+  when: ( all_jvm | default('all_jvm', false) == 'true')
+- debug:
+    var: stop_was
+
+- name: "PEGANDO NOME COMPLETO DO SERVIÇO"
+  win_shell: "(Get-Service -ServiceName *{( item }}).Name"
+  loop: "{{ servers_alerta | lower }}"
+  register: get_was_jvm
+  ignore_errors: yes
+  when: "{{ servers_alerta | lenght }} != 0"
+- debug:
+    var: item.stdout_lines
+  loop: "{{ get_was_jvm.results }}"
+  ignores_errors: yes
+
+- name: SAVE NAME SERVICE
+  set_fact:
+    name_service: []
+  ignore_errors: yes
+
+- name: LIST NAME SERVICE
+  set_fact:
+    name_service: "{{ name_service + item.stdout_lines }}"
+  with_items: "{{ get_was_jvm.results }}"
+  ignore_errors: yes
+
+- name: "STOP JVM - By Win Service INFORMADO NO SERVERS_ALERTA"
+  win_shell: "Stop-Service - ServiceName '{{ item }}'"
+  with_items:
+    - "{{ name_service }}"
+  register: stop_was_service_jvm
+  ignore_errors: yes
+  when: "{{ get_was_jvm | length }} != 0"
+- debug:
+    var: stop_was_service_jvm
+
+- pause:
+    seconds: 20
+
+- name: "Comando da Bath (Optional)"
+  win_shell: "{{ optional_cmd_bath }}"
+  args:
+    executable: cmd
+  register: cmd_bath
+  ignore_errors: yes
+  when: "{{ optional_cmd_bath|length }} != 0"
+- debug:
+    var: cmd_bath
+
+- pause:
+    seconds: 20
+
+- name: "START JVM WAS - By Command Line"
+  win_shell: "{{ was_startup_cmd_windows }} {{ item }}"
+  register: recycle_start_log
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+  when: "{{ servers_alerta|length }} != 0"
+  args:
+    executable: cmd
+    chdir: "{{ was_install_location }}/profiles/{{ profile_name }}/bin"
+  failed_when: recycle_start_log.rc == 1 #?
+- debug:
+    var: recycle_start_log
+
+- name: "START JVM WAS - By Win Service"
+  win_shell: $Obj = (Get-WmiObject Win32_Service | Where {$_.StartMode -eq 'Disabled'}); Foreach ($service in @(Get-Service -ServiceName 'IBMWAS*' -Exclude $Obj ).Name){Start-Service -Name $service}; $arrService = Get-Service -ServiceName 'IBMWAS*''; $arrService.Status
+  register: start_was
+  ignore_errors: yes
+  when: ( all_jvm | default('all_jvm', false) == 'true')
+- debug:
+    var: start_was
+
+- name: "START JVM - By Win Service INFORMADO NO SERVERS_ALERTA"
+  win_shell: "Start-Service - ServiceName '{{ item }}'"
+  with_items:
+    - "{{ name_service }}"
+  register: start_was_service_jvm
+  ignore_errors: yes
+  when: "{{ get_was_jvm | length }} != 0"
+- debug:
+    var: start_was_service_jvm
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS={{ result.changes|default(result.results) }}"
+  when: result is defined
+
+- name: SET FACT MSG RESULT SUCCESS - Restart pela JVM
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS=JVM(s) Reciclado(s) com Sucesso no servidor {{ hostname }} | JVM(s): {{ servers_alerta }}"
+  with_sequence: start=0 end="{{ recycle_start_log['results']|length - 1}}"
+  when: (result is not defined) and (recycle_start_log.results[item|int].rc | default('') == 0)
+
+- name: SET FACT MSG RESULT SUCCESS - Restart pelo Win Service
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS=Serviço(s) WAS Reciclado(s) com Sucesso no servidor {{ hostname }} by Win Service"
+  when: (result is not defined) and (start_was.rc | default ('') == 0)
+
+- name: SET FACT MSG RESULT SUCCESS - Senha na JVM
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS=Há uma senha fixada na JVM. Por gentileza, remover a senha para que ela seja reinicializada."
+  with_sequence: start=0 end="{{ recycle_start_log['results']|length - 1}}"
+  when: "(result is not defined and recycle_start_log.results[item|int].rc | default('') == 4294967295) or (result is not defined and start_was.rc | default('') == 4294967295)"
+
+- name: SET STAT MSG RESULT SUCCESS
+  set_stats:
+    data:
+      msg_result_stats: "{{ msg_result }}"
+
+- name: MSG RESULT SUCCESS
+  debug:
+    msg: "{{ msg_result }}"
+- set_fact:
+    return_code: 'true'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- debug:
+    var: ansible_failed_result
+
+- name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+  set_fact:
+    msg_result: "Falha na reinicializacao dos servicos WAS no hostname {{ hostname }}"
+  when: msg_result is not defined
+
+- fail:
+    msg: '{{ msg_result }}'
+- set_fact:
+    return_code: 'false'

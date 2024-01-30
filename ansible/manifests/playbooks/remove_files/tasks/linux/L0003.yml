@@ -1,0 +1,52 @@
+---
+
+- name: COLETANDO LAST_AWX_JOB_ID
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: "{{ L0003_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: L0003 - COPIA SCRIPTS PARA O SERVIDOR DESTINO
+  copy:
+    src: files/L0003/{{ item }}
+    dest: /tmp/
+    mode: '0777'
+  with_items:
+    - ClearDisk.jar
+    - LimpezaDisco.properties
+
+- name: L0003 - LIMPEZA
+  shell: "java -DlogDir=/tmp/ -jar /tmp/ClearDisk.jar"
+  args:
+    chdir: /tmp/
+  register: limpeza
+
+- name: L0003 - REMOVE SCRIPTS O SERVIDOR DESTINO
+  file:
+    path: /tmp/{{ item }}
+    state: absent
+  with_items:
+    - ClearDisk.jar
+    - LimpezaDisco.properties
+
+- set_fact:
+    add_info: 'Limpeza L0003 efetuada com sucesso'
+  when: limpeza.stdout is defined
+
+- debug:
+    msg: "{{ add_info }}"
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        msg_error: "{{ limpeza.stderr }}"
+    - debug:
+        msg: "{{ msg_error }}"
+    - fail:

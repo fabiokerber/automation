@@ -1,0 +1,96 @@
+---
+
+- name: ANSIBLE-DIARIO-DE-BORDO
+  include_role:
+    name: ansible-diario-de-bordo
+  vars:
+    platform: "Linux"
+    sendToBdmScriptName: "sh-linux-remove-fs-files"
+
+- name: INICIANDO LIMPEZA DOS ARQUIVOS SOLICITADOS
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+      servidor: "{{ hostname.split('.')[0] | lower }}"
+      platform: Linux
+
+- name: VERIFICANDO REGRAS DE LIMPEZA PARA LINUX
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: L0000
+  include_tasks: L0000.yml
+  when: servidor in L0000_hostname
+
+- name: L0001 # Executa em todos os servidores
+  include_tasks: L0001.yml
+
+- name: L0002
+  include_tasks: L0002.yml
+  when: servidor in L0002_hostname
+
+- name: L0003
+  include_tasks: L0003.yml
+  when: servidor in L0003_hostname
+
+- name: L0004
+  include_tasks: L0004.yml
+  when: servidor in L0004_hostname
+
+- name: L0020
+  include_tasks: L0020.yml
+  when: servidor in L0020_hostname
+
+- name: L0021
+  include_tasks: L0021.yml
+  when: servidor in L0021_hostname
+
+# -------------------------------------------------------------
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS={{ result.changes|default(result.results) }}"
+  when: result is defined
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS=Limpeza de diretório executada com sucesso no servidor {{ servidor }}."
+  when: (result is not defined)
+
+- name: SET STAT MSG RESULT SUCCESS
+  set_stats:
+    data:
+      msg_result_stats: "{{ msg_result }}"
+
+- name: MSG RESULT SUCCESS
+  debug:
+    msg: "{{ msg_result }}"
+- set_fact:
+    return_code: 'true'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- name: SET FACT MSG RESULT FAILED
+  set_fact:
+    msg_result: "AWX:ERROR:MSG=HOSTNAME: {{ servidor }} - TASK: {{ ansible_failed_task|json_query(query_name) }} - MSG: {{ ansible_failed_result|json_query(query_msg) }}"
+  vars:
+    query_name: "name"
+    query_msg: "msg"
+
+- debug:
+    var: msg_result
+
+- name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+  set_fact:
+    msg_result: "Falha ao efetuar a limpeza de diretórios no servidor {{ servidor }}."
+  when: msg_result is not defined
+
+- fail:
+    msg: '{{ msg_result }}'
+
+- set_fact:
+    return_code: 'false'

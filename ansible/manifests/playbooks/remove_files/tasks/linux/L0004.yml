@@ -1,0 +1,30 @@
+---
+- name: "{{ L0004_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: L0004 - IHSCONF REMOVE ARQUIVOS
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items:
+    - find /opt/IHSCONF/*/logs/*/ -type f \( -name \*.log -o -name \*.gz \) -mtime +5 -print -exec rm -f {} \;
+  register: ihsconf
+
+- name: L0004 - IHSCONFIG ARQUIVOS REMOVIDOS
+  debug:
+    msg: "{{ ihsconf.results[0].stdout_lines }}"
+
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        add_info: 'Falha na limpeza L0004'
+
+    - debug:
+        msg: "{{ add_info }}"
+
+    - fail:

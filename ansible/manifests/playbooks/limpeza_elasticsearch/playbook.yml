@@ -1,0 +1,14 @@
+---
+
+- name: "Limpeza Index ElasticSearch"
+  hosts: "{{ hostname | lower }}"
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: "Executa limpeza"
+      include_tasks: tasks/executa_limpeza.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+
+...

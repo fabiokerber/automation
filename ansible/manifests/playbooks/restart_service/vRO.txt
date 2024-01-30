@@ -1,0 +1,10 @@
+LINUX
+
+service_action: restart
+service_name: kibana
+
+> TOWER > Git sh-so-manage-service-all-multi
+
+    > LINUX > ANSIBLE-LINUX-MANAGE-SERVICE-ALL
+
+    > WINDOWS > ANSIBLE-WIN-MANAGE-SERVICE-ALL

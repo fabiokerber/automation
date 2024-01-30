@@ -1,0 +1,4 @@
+LINUX
+
+hostname: srv01
+platform: Linux

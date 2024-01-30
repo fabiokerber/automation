@@ -1,0 +1,11 @@
+---
+
+- name: ANSIBLE-WIN-MANAGE-SERVICE-ALL
+  include_role:
+    name: ANSIBLE-WIN-MANAGE-SERVICE-ALL
+  vars:
+    platform: "Wintel"
+    service_name: "{{ service_name }}"
+    service_action: "{{ service_action }}"
+
+...

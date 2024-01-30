@@ -1,0 +1,35 @@
+---
+
+- name: COLETANDO LAST_AWX_JOB_ID
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: "{{ W0001_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: W0001 - LIMPEZA IIS
+  ignore_errors: yes
+  shell: "{{ item }}"
+  args:
+    executable: cmd
+  with_items:
+    - forfiles /p "D:\LogIIS\PortalWEBsite\W3SVC1" /s /m *.log /D -5 /C "cmd /c del @path"
+    - forfiles /p "D:\LogIIS\PortalJavasb\W3SVC70840049" /s /m *.log /D -5 /C "cmd /c del @path"
+  register: limpeza
+
+- set_fact:
+    add_info: 'Limpeza L0020 efetuada com sucesso'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        add_info: 'Falha na limpeza W0001'
+    - debug:
+        msg: "{{ add_info }}"
+    - fail:

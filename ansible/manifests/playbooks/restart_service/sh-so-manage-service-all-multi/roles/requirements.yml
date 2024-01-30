@@ -1,0 +1,13 @@
+---
+
+# Linux
+- src: <endereco_git>
+  name: ANSIBLE-LINUX-MANAGE-SERVICE-ALL
+  scm: git
+  version: develop #deveria ser master....
+
+# Windows
+- src: <endereco_git>
+  name: ANSIBLE-WIN-MANAGE-SERVICE-ALL
+  scm: git
+  version: develop #deveria ser master....

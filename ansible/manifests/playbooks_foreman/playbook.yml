@@ -1,0 +1,13 @@
+---
+
+- name: Import Roles to Foreman
+  hosts: localhost
+  roles:
+    - remove_files
+#  tasks:
+#    - name: Importing
+#      include_tasks: roles/remove_files/tasks/main.yml
+#      vars_files:
+#        - roles/rhel/vars/main.yml
+
+...

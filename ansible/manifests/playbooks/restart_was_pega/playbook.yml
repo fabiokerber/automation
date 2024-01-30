@@ -1,0 +1,25 @@
+---
+
+- name: "PLAYBOOK SH-APP-MANAGE-SERVICE-WAS-PEGA"
+  hosts: "{{ hostname | lower }}"
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: STOP WAS - LINUX
+      include_tasks: tasks/stop_was_linux.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+        - "'{{ action }}' == 'stop'"
+
+    - name: START WAS - LINUX
+      include_tasks: tasks/start_was_linux.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+        - "'{{ action }}' == 'start'"
+
+    - name: ANSIBLE-RESTART-WAS-MULTI - LINUX   #ROBOTIZADA
+      include_tasks: tasks/was_linux.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+        - "'{{ automation_type }}' == 'ROBOTIZADA'"

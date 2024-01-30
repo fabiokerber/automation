@@ -1,0 +1,11 @@
+---
+
+- name: ANSIBLE-LINUX-MANAGE-SERVICE-ALL
+  include_role:
+    name: ANSIBLE-LINUX-MANAGE-SERVICE-ALL
+  vars:
+    platform: "Linux"
+    service_name: "{{ service_name }}"
+    service_action: "{{ service_action }}"
+
+...

@@ -1,0 +1,8 @@
+---
+
+- name: COMANDO A SER EXECUTADO
+  hosts: "{{ hostname | lowe }}"
+  gather_facts: no
+
+  roles:
+    - role: roles/command

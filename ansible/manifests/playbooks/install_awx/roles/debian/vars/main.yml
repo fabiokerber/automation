@@ -1,0 +1,16 @@
+---
+
+packages:
+  - make
+  - gcc
+  - perl-base
+  - libpcre3-dev
+  - zlib1g-dev
+  - ca-certificates
+  - curl
+  - build-essential
+  - checkinstall
+
+host: vmdev08.awx.lab
+
+...

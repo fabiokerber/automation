@@ -1,0 +1,10 @@
+---
+
+- name: "GERENCIA SERVICOS WINTEL"
+  hosts: "{{ hostname }}"
+  ignore_unreachable: yes
+  gather_facts: false
+  tasks:
+    - import_tasks: tasks/main.yml
+
+...

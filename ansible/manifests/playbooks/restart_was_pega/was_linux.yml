@@ -1,0 +1,117 @@
+---
+
+- name: SELF-HEALING REALIZA RESTART DOS SERVIÇOS WAS DOS SERVIDORES LINUX
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: "Verifica Servers do Alerta"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep '{{ item }}'"
+  register: verifica_servers
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_servers
+
+- name: "Start Server caso PID não existir"
+  shell: "su -c '{{ was_install_location }}/profiles/{{ profile_name }}/bin/{{ was_startup_cmd_linux }} {{ verifica_servers['results'][item|int]['item'] }}' - websphere"
+  register: start_manual_sem_pid
+  ignore_errors: yes
+  with_sequence: start=0 end="{{ verifica_servers['results'] | length - 1 }}"
+  when: "{{ verifica_servers['results'][item|int]['stdout'] | length }} == 0"
+- debug:
+    var: start_manual_sem_pid
+
+- pause:
+    seconds: 10
+
+- name: "KILL -3 do PID das JVMs do Alerta"
+  shell: "kill -3 $(ps -ef | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | grep {{ item }} | awk '{print $2}')"
+  register: kill_was_dump
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: kill_was_dump
+
+- name: "KILL -9 do PID das JVMs do Alerta"
+  shell: "kill -9 $(ps -ef | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | grep {{ item }} | awk '{print $2}')"
+  register: kill_was
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: kill_was
+
+- pause:
+    seconds: 20
+
+- name: "Verifica Start Automatico" #Caso o node agente inicie a JVM automaticamente após o KILL
+  shell: "ps aux | grep -v grep | grep was | grep {{ item }} | awk '{print $2}' | wc -l"
+  register: verifica_start_automatico
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_start_automatico
+
+- name: "Start MANUAL da JVM"
+  shell: "su -c '{{ was_install_location }}/profiles/{{ profile_name }}/bin/{{ was_startup_cmd_linux }} {{ server_jvm }}' - websphere"
+  register: start_manual
+  ignore_errors: yes
+  with_sequence: start=0 end="{{ verifica_servers['results'] | length - 1 }}"
+  when: "{{ verifica_start_automatico['results'][item|int]['stdout'] }} == 0"
+- debug:
+    var: start_manual
+
+- name: "Start MANUAL DMGR"
+  shell: "su -c '{{ was_install_location }}/profiles/{{ profile_name }}/bin/startManager.sh' - websphere"
+  register: start_manual_dmgr
+  ignore_errors: yes
+  when: "'dmgr' in servers_alerta"
+- debug:
+    var: start_manual_dmgr
+
+- name: "Status JVMs"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep '{{ item }}'"
+  register: verifica_servers
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_servers
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS={{ result.changes|default(result.results) }}"
+  when: result is defined
+
+- name: SET FACT MSG RESULT SUCCESS
+  set_fact:
+    msg_result: "AWX:DATA:SUCCESS=JVM(s) Reciclado(s) com Sucesso no servidor {{ hostname }} | JVM(s): {{ servers_alerta }}"
+  when: (result is not defined)
+
+- name: SET STAT MSG RESULT SUCCESS
+  set_stats:
+    data:
+      msg_result_stats: "{{ msg_result }}"
+
+- name: MSG RESULT SUCCESS
+  debug:
+    msg: "{{ msg_result }}"
+- set_fact:
+    return_code: 'true'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- debug:
+    var: ansible_failed_result
+
+- name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+  set_fact:
+    msg_result: "Falha na reinicializacao dos servicos WAS no hostname {{ hostname }}"
+  when: msg_result is not defined
+
+- fail:
+    msg: '{{ msg_result }}'
+- set_fact:
+    return_code: 'false'

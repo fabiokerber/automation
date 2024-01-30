@@ -1,0 +1,32 @@
+---
+
+- name: COLETANDO LAST_AWX_JOB_ID
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: "{{ L0020_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: L0020 - LIMPEZA DE ARQUIVOS TZ
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items:
+    - find /var/log/storm/workers-artifacts/* -mtime +30 -exec rm -rf '{}' +
+  register: limpeza
+
+- set_fact:
+    add_info: 'Limpeza L0020 efetuada com sucesso'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        add_info: 'Falha na limpeza L0020'
+    - debug:
+        msg: "{{ add_info }}"
+    - fail:

@@ -1,0 +1,36 @@
+---
+
+- name: REALIZA RESTART DE SERVIÇO
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: "EXECUTANDO {{ service_action | upper }} DO SERVIÇO {{ service_name | upper}}"
+  win_service:
+    name: "{{ service_name }}"
+    state: restarted
+  register: coleta_valor
+
+- name: CRIA MENSAGEM DE SUCESSO
+  set_fact:
+    msg_error: "AWX:DATA:RETURN=Serviço Reiniciado com sucesso."
+
+- name: RETORNA MENSAGEM DE SUCESSO
+  debug:
+    msg: "{{ msg_error }}"
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- name: CRIA MENSAGEM DE FALHA
+  set_fact:
+    msg_error: "AWX:ERROR:RETURN={{ coleta_valor.msg }}"
+    msg_result: "{{ coleta_valor.msg }}"
+
+- name: RETORNA MENSAGEM DE FALHA
+  debug:
+    msg: "{{ msg_error }}"
+
+...

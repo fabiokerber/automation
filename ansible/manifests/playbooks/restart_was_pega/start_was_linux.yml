@@ -1,0 +1,111 @@
+---
+
+- name: SELF-HEALING REALIZA START DOS SERVIÇOS WAS DOS SERVIDORES LINUX
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: "Verifica Servers do Alerta"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep '{{ item }}'"
+  register: verifica_servers
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_servers
+
+- name: "Start MANUAL da JVM"
+  shell: "su -c '{{ was_install_location }}/profiles/{{ profile_name }}/bin/{{ was_startup_cmd_linux }} {{ item }}' - websphere"
+  register: start_manual
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: start_manual
+
+# ------------------------------------ KILL + START srvpoivlbr01 JVM BPMHKPegaApp05 --------------------------------------
+
+- name: "KILL -3 do PID srvpoivlbr01 JVM BPMHKPegaApp05"
+  shell: "kill -3 $(ps -ef | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | grep BPMHKPegaApp05 | awk '{print $2}')"
+  register: kill_was_dump_jvm_BPMHKPegaApp05
+  ignore_errors: yes
+  when:
+    - "'{{ hostname }}' == 'srvpoivlbr01'"
+- debug:
+    var: kill_was_dump_jvm_BPMHKPegaApp05
+
+- name: "KILL -9 do PID srvpoivlbr01 JVM BPMHKPegaApp05"
+  shell: "kill -9 $(ps -ef | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | grep BPMHKPegaApp05 | awk '{print $2}')"
+  register: kill_was_jvm_BPMHKPegaApp05
+  ignore_errors: yes
+  when:
+    - "'{{ hostname }}' == 'srvpoivlbr01'"
+- debug:
+    var: kill_was_jvm_BPMHKPegaApp05
+
+- pause:
+    seconds: 20
+
+- name: "Start MANUAL da JVM srvpoivlbr01 JVM BPMHKPegaApp05"
+  shell: "su -c '/opt/IBM/websphere/AppServer_8.5.5/profiles/PEGAHKNode01/bin/startServer.sh BPMHKPegaApp05' - websphere"
+  register: start_manual_jvm_BPMHKPegaApp05
+  ignore_errors: yes
+  when:
+    - "'{{ hostname }}' == 'srvpoivlbr01'"
+- debug:
+    var: start_manual_jvm_BPMHKPegaApp05
+
+- name: "Status JVMs srvpoivlbr01 JVM BPMHKPegaApp05"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep 'BPMHKPegaApp05'"
+  register: verifica_servers_jvm_BPMHKPegaApp05
+  ignore_errors: yes
+  when:
+    - "'{{ hostname }}' == 'srvpoivlbr01'"
+- debug:
+    var: verifica_servers_jvm_BPMHKPegaApp05
+# ------------------------------------------------------------------------------------------------------------------------
+
+- name: "Status JVMs"
+  shell: "ps aux | grep 'was' | grep -v grep | grep -v nmon | tr -s ' ' | egrep '{{ item }}'"
+  register: verifica_servers
+  ignore_errors: yes
+  with_items: "{{ servers_alerta }}"
+- debug:
+    var: verifica_servers
+
+- set_fact:
+    msg_result: "AWX:DATA:SUCCESS= Serviço(s) WAS inicializado(s) com sucesso no hostname {{ hostname }}"
+  with_sequence: start=0 end="{{ verifica_servers['results'] | length - 1}}"
+  when: "{{ verifica_servers['results'][item|int]['stdout'] | lenght }} == 0"
+
+- set_fact:
+    msg_result: "AWX:DATA:SUCCESS= Foi executado o comando de START, mas não foi possível inicializar a(s) JVM(s) no servidor {{ hostname }}"
+  with_sequence: start=0 end="{{ verifica_servers['results'] | length - 1}}"
+  when: "{{ verifica_servers['results'][item|int]['stdout'] | lenght }} != 0"
+
+- name: SET STAT MSG RESULT SUCCESS
+  set_stats:
+    data:
+      msg_result_stats: "{{ msg_result }}"
+
+- name: MSG RESULT SUCCESS
+  debug:
+    msg: "{{ msg_result }}"
+- set_fact:
+    return_code: 'true'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- debug:
+    var: ansible_failed_result
+
+- name: SET FACT MSG RESULT IF RESULT IS NOT DEFINED
+  set_fact:
+    msg_result: "Falha na paralização dos servicos WAS no hostname {{ hostname }}"
+  when: msg_result is not defined
+
+- fail:
+    msg: '{{ msg_result }}'
+- set_fact:
+    return_code: 'false'

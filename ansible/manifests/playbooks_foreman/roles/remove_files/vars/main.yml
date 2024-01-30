@@ -1,0 +1,22 @@
+---
+
+folder:
+  - /tmp/files
+
+files:
+  - file0.log
+  - file1.log
+  - file2.log
+  - file3.log
+  - file4.log
+
+old_files:
+  - file5.log
+  - file6.log
+  - file7.log
+  - file8.log
+  - file9.log
+
+filesremoved: []
+
+...

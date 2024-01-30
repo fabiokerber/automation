@@ -1,0 +1,43 @@
+---
+
+- set_fact:
+    shell_command: "systemctl start {{ service_name }}"
+  when:
+    - ansible_facts['distribution'] == "RedHat"
+    - ansible_facts['distribution_major_version'] == "7"
+
+- set_fact:
+    shell_command: "service {{ service_name }} start"
+  when:
+    - ansible_facts['distribution'] == "RedHat"
+    - ansible_facts['distribution_major_version'] == "6"
+
+- name: "Executando {{ service_action }} do serviço {{ service_name }} via SHELL"
+  shell: "{{ shell_command }}"
+  register: coleta_valor
+  ignore_errors: yes
+  when:
+    - shell_command is defined
+
+    - debug: msg="coleta_valor.msg={{ coleta_valor }}"
+
+- set_fact:
+    return_node_red: "DATA"
+    resposta_restart_servico: "Serviço iniciado com sucesso."
+  when: coleta_valor.rc == 0
+
+- set_fact:
+    return_node_red: "ERROR"
+    msg_result: "{{ coleta_valor.stderr }}"
+    resposta_restart_servico: "{{ coleta_valor.stderr }}"
+  when: coleta_valor.rc != 0
+
+- debug:
+  msg:
+    - "AWX:{{ return_node_red }}:RETURN={{ resposta_start_servico }}"
+
+- name: Forçada falha do AT
+  fail:
+    msg:
+      - "AWX:{{ return_node_red }}:RETURN={{ resposta_start_servico }}"
+  when: coleta_valor.failed == True

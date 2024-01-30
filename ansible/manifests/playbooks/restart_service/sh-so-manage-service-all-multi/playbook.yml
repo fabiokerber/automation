@@ -1,0 +1,27 @@
+---
+
+- name: "PLAYBOOK SH-SO-MANAGE-SERVICE-ALL-MULTI LINUX"
+  hosts: "{{ hostname | lower }}"
+  become: true
+  ignore_unreachable: yes
+  gather_facts: false
+
+  tasks:
+    - name: MANAGE SERVICE ALL - LINUX
+      include_tasks: tasks/manage_service_linux.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+
+- name: "PLAYBOOK SH-SO-MANAGE-SERVICE-ALL-MULTI WINDOWS"
+  hosts: "{{ hostname | lower }}"
+  become: true
+  ignore_unreachable: yes
+  gather_facts: false
+
+  tasks:
+    - name: MANAGE SERVICE ALL - WINDOWS
+      include_tasks: tasks/manage_service_windows.yml
+      when:
+        - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'Windows') or (platform is defined and platform | lower == 'windows') or (platform is defined and platform | lower == 'wintel')
+
+...

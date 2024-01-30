@@ -1,0 +1,37 @@
+---
+
+- name: COLETANDO LAST_AWX_JOB_ID
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: "{{ L0021_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+# COMANDO $ sudo su - aeuser -c 'rm /software/isban/ae/app/wso2mt/repository/resources/mt/bin/core.*'
+- name: L0021 - LIMPEZA DE ARQUIVOS CORE
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items:
+    - rm /software/isban/ae/app/wso2mt/repository/resources/mt/bin/core.*
+  become: yes
+  become_method: su
+  become_exe: sudo su -
+  become_user: aeuser
+  register: limpeza
+
+- set_fact:
+    add_info: 'Limpeza L0021 efetuada com sucesso'
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        add_info: 'Falha na limpeza L0021'
+    - debug:
+        msg: "{{ add_info }}"
+    - fail:

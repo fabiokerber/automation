@@ -1,0 +1,50 @@
+---
+
+- name: "LAST_AWX_JOB_ID"
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: GERENCIA DE SERVICO
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: COLETANDO INFORMACOES DO SERVICO
+  ignore_errors: yes
+  win_service:
+    name: "{{ service_name }}"
+  register: informacoes_do_servico
+
+- name: CRIA MENSAGEM DE FALHA
+  set_fact:
+    msg_result: "Nome do serviço não encontrado."
+  when: informacoes_do_servico.exists == False
+
+- name: FALHA SERVICE_NOT_FOUND
+  fail:
+    msg:
+      - "AWX:ERROR:RETURN=Nome do serviço não encontrado."
+  when: informacoes_do_servico.exists == False
+
+- name: STATUS DO SERVICO ANTES DA AUTOMACAO
+  debug: msg="{{ informacoes_do_servico.state }}"
+
+- name: "REALIZAR {{ service_action | upper }} DO SERVIÇO"
+  include_tasks:
+    file: "{{ service_action }}_win_service.yml"
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- name: CRIA MENSAGEM DE FALHA
+  set_fact:
+    msg_result: "Ocorreu um erro durante a execução."
+
+- name: RETORNA MENSAGEM DE FALHA
+  debug:
+    msg: "{{ msg_result }}"
+
+...

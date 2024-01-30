@@ -1,0 +1,98 @@
+---
+
+- name: COLETANDO LAST_AWX_JOB_ID
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: "{{ L0001_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: L0001(0) - APAGA ARQUIVOS GENERICOS
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items:
+    - rm -f /tmp/*.txt
+    - rm -f /tmp/*.log
+    - find /var/log/httpd/*.gz -mtime +2 -exec rm -f {} \;
+    - find /nmon/coletas -type f -mtime +60 -name 'coleta_{{ servidor }}*' -exec rm -f {} \;
+
+    - set_fact:
+        add_info: 'Limpeza L0001 efetuada com sucesso'
+    - debug: 
+        msg: "{{ add_info }}"
+
+- name: L0001(1) - CTMAGCLU CHECA ARQUIVOS
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items: 
+    - find /produtos/ctm/ctmagclu/ctm/proclog -name *.log -print 2>/dev/null | wc -l
+  register: ctmagclu
+
+- name: L0001(2) - CTMAGCLU CRIA SCRIPT
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items:
+    - echo '#!/bin/bash' > /tmp/clean.sh
+    - echo 'lista=`find /produtos/ctm/ctmagclu/ctm/proclog -name *.log`' >> /tmp/clean.sh
+    - echo 'for i in $lista' >> /tmp/clean.sh
+    - echo 'do' >> /tmp/clean.sh
+    - echo 'echo -n >$i &>/dev/null' >> /tmp/clean.sh
+    - echo 'done' >> /tmp/clean.sh
+  when: ctmagclu.results[0].stdout != "0"
+
+- name: L0001(3) - CTMAGCLU EXECUTA LIMPEZA
+  shell: "sh /tmp/clean.sh"
+  when: ctmagclu.results[0].stdout != "0"
+
+- name: L0001(4) - CTMAGCLU REMOVE SCRIPT
+  file:
+    path: /tmp/{{ item }}
+    state: absent
+  with_items:
+    - clean.sh
+  when: ctmagclu.results[0].stdout != "0"
+
+- name: L0001(5) - DISKSTATS AIX CHECA ARQUIVOS
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items: 
+    - find /usr/folder/var -name *.DAT -print 2>/dev/null | wc -l
+  register: diskstatsaix
+
+- name: L0001(6) - DISKSTATS AIX CRIA SCRIPT
+  ignore_errors: yes
+  shell: "{{ item }}"
+  with_items:
+    - echo '#!/bin/bash' > /tmp/clean.sh
+    - echo 'lista=`du -sk /usr/folder/var/*.DAT | sort -rn | head -n1 | awk '{print $2}'`' >> /tmp/clean.sh
+    - echo 'for i in $lista' >> /tmp/clean.sh
+    - echo 'do' >> /tmp/clean.sh
+    - echo 'echo -n >$i &>/dev/null' >> /tmp/clean.sh
+    - echo 'done' >> /tmp/clean.sh
+  when: diskstatsaix.results[0].stdout != "0"
+
+- name: L0001(7) - DISKSTATS AIX EXECUTA LIMPEZA
+  shell: "sh /tmp/clean.sh"
+  when: diskstatsaix.results[0].stdout != "0"
+
+- name: L0001(8) - DISKSTATS AIX REMOVE SCRIPT
+  file:
+    path: /tmp/{{ item }}
+    state: absent
+  with_items:
+    - clean.sh
+  when: diskstatsaix.results[0].stdout != "0"
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        add_info: 'Falha na limpeza L0001'
+    - debug:
+        msg: "{{ add_info }}"
+    - fail:

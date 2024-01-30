@@ -1,0 +1,9 @@
+---
+
+servidor: "{{ hostname.split('.')[0] | lower }}" #splita caso venha o hostname com dominio e pega a posicao 0
+platform: Wintel
+
+error_code: 0
+success: "{{ return_code }}"
+
+W0001_descricao: W0001 - LIMPEZA DE ARQUIVOS GERAIS

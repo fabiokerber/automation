@@ -1,0 +1,28 @@
+---
+
+- name: "DIARIO DE BORDO - REDHAT"
+  lineinfile:
+    path: /var/log/automacao_ansible.log
+    line: "{{ lookup('pipe','TZ=\"America/Sao_Paulo\" date +%Y-%m-%dT%H:%M:%S.%s') }} - Executado {{ sendToBdmScriptName | upper }}"
+    create: yes
+  when:
+    - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') or (platform is defined and platform == 'RedHat') or (platform is defined and platform == 'Linux')
+  ignore_errors: yes
+
+- name: "DIARIO DE BORDO CRIAR DIRETORIO - WINDOWS"
+  win_file:
+    path: C:\winhc\log
+    state: directory
+  when:
+    - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'Windows') or (platform is defined and platform == 'Windows') or (platform is defined and platform == 'Wintel')
+  ignore_errors: yes
+
+- name: "DIARIO DE BORDO - WINDOWS"
+  win_lineinfile:
+    path: C:\winhc\log\automacao_ansible.log
+    line: "{{ lookup('pipe','date') }} - Executado {{ sendToBdmScriptName | upper }}"
+    create: yes
+  when:
+    - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'Windows') or (platform is defined and platform == 'Windows') or (platform is defined and platform == 'Wintel')
+  ignore_errors: yes
+

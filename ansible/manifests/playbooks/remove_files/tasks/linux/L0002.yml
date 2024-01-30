@@ -1,0 +1,78 @@
+---
+
+- name: COLETANDO LAST_AWX_JOB_ID
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: "{{ L0002_descricao }}"
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: L0002(0) - CONSULTA UTILIZACAO DO FS
+  shell: "df -h /produtos/pcenter/server/bin/ | egrep -o '[0-9]+%' | cut -d '%' -f 1"
+  register: pct_ocupado_produtos_pcenter_server_bin
+
+- name: L0002(1) - CONSULTA UTILIZACAO DO FS
+  shell: "df -h /pwcenter9/Informatica/PowerCenter9.1.0/server/bin/ | egrep -o '[0-9]+%' | cut -d '%' -f 1"
+  register: pct_ocupado_pwcenter9_informatica_powerCenter9_1_0_server_bin
+
+- name: L0002(2) - CONSULTA UTILIZACAO DO FS
+  shell: "df -h /pwcenter91/Informatica/PowerCenter9.1.0/server/bin/ | egrep -o '[0-9]+%' | cut -d '%' -f 1"
+  register: pct_ocupado_pwcenter91_informatica_powerCenter9_1_0_server_bin
+
+- name: L0002(0) - VALIDA SE DIRETORIO EXISTE
+  stat:
+    path: /produtos/pcenter/server/bin/
+  register: produtos_pcenter_server_bin
+
+- name: L0002(1) - VALIDA SE DIRETORIO EXISTE
+  stat:
+    path: /pwcenter9/Informatica/PowerCenter9.1.0/server/bin/
+  register: pwcenter9_Informatica_PowerCenter9_1_0_server_bin
+
+- name: L0002(2) - VALIDA SE DIRETORIO EXISTE
+  stat:
+    path: /pwcenter91/Informatica/PowerCenter9.1.0/server/bin/
+  register: pwcenter91_Informatica_PowerCenter9_1_0_server_bin
+
+- name: L0002(0) - LIMPEZA
+  shell: "rm -f /produtos/pcenter/server/bin/core.*"
+  when: produtos_pcenter_server_bin.stat.exists and produtos_pcenter_server_bin.stdout | int > 90
+  register: limpeza
+  ignore_errors: yes
+
+- name: L0002(1) - LIMPEZA
+  shell: "rm -f /pwcenter9/Informatica/PowerCenter9.1.0/server/bin/core.*"
+  when: pwcenter9_Informatica_PowerCenter9_1_0_server_bin.stat.exists and pwcenter9_Informatica_PowerCenter9_1_0_server_bin.stdout | int > 90
+  register: limpeza
+  ignore_errors: yes
+
+- name: L0002(2) - LIMPEZA
+  shell: "rm -f /pwcenter91/Informatica/PowerCenter9.1.0/server/bin/core.*"
+  when: pwcenter91_Informatica_PowerCenter9_1_0_server_bin.stat.exists and pwcenter91_Informatica_PowerCenter9_1_0_server_bin.stdout | int > 90
+  register: limpeza
+  ignore_errors: yes
+
+- set_fact:
+    add_info: 'Limpeza L0002 efetuada com sucesso'
+  when: limpeza.stdout is defined
+
+- set_fact:
+    add_info: 'Skipping limpeza L0002'
+  when: limpeza.stdout is not defined
+
+- debug:
+    msg: "{{ add_info }}"
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+    - set_fact:
+        msg_error: "{{ limpeza.stderr }}"
+    - debug:
+        msg: "{{ msg_error }}"
+    - fail:

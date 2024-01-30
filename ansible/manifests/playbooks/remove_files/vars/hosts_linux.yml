@@ -1,0 +1,27 @@
+---
+
+servidor: "{{ hostname.split('.')[0] | lower }}" #splita caso venha o hostname com dominio e pega a posicao 0
+platform: Linux
+
+error_code: 0
+success: "{{ return_code }}"
+
+L0000_descricao: L0000 - VALIDAÇÃO
+L0000_hostname: ["srv0001homolog"]
+
+L0001_descricao: L0001 - LIMPEZA DE ARQUIVOS GERAIS # Executa em todos os servidores
+
+L0002_descricao: L0002 - LIMPEZA DE ARQUIVOS .CORE DO DIRETÓRIO DE BINÁRIO DO POWERCENTER
+L0002_hostname: ["srv0001","srv0002"]
+
+L0003_descricao: L0003 - LIMPEZA DE ARQUIVOS .CORE DO DIRETÓRIO DE BINÁRIO DO POWERCENTER
+L0003_hostname: ["srv0003","srv0004"]
+
+L0004_descricao: L0004 - LIMPEZA IHSCONF
+L0004_hostname: ["srv0020","srv0021"]
+
+L0020_descricao: L0020 - LIMPEZA DE ARQUIVOS TZ
+L0020_hostname: ["srv0090","srv0091"]
+
+L0021_descricao: L0021 - LIMPEZA DE ARQUIVOS CORE
+L0021_hostname: ["srv0094","srv0095"]

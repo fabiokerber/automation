@@ -1,0 +1,23 @@
+---
+
+- name: "RHEL PLAYBOOK INSTALL-AWX"
+  hosts: localhost
+  vars_files:
+    - roles/rhel/vars/main.yml
+  tasks:
+    - name: "RHEL OS"
+      include_tasks: roles/rhel/tasks/main.yml
+      when:
+      - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'RedHat') and (ansible_facts['distribution_major_version'] is defined and ansible_facts['distribution_major_version'] == '7.8')
+
+- name: "DEBIAN PLAYBOOK INSTALL-AWX"
+  hosts: localhost
+  vars_files:
+    - roles/debian/vars/main.yml
+  tasks:
+    - name: "DEBIAN OS"
+      include_tasks: roles/debian/tasks/main.yml
+      when:
+      - (ansible_facts['distribution'] is defined and ansible_facts['distribution'] == 'Debian') and (ansible_facts['distribution_major_version'] is defined and ansible_facts['distribution_major_version'] == '9')
+
+...

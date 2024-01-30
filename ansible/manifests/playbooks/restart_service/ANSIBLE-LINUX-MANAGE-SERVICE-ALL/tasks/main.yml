@@ -1,0 +1,61 @@
+---
+
+- name: "LAST_AWX_JOB_ID"
+  set_stats:
+    data:
+      last_awx_job_id: "{{ awx_job_id }}"
+
+- name: GERENCIA DE SERVICO
+
+# -------------------------------------------------------------
+  block:
+# -------------------------------------------------------------
+
+- name: "Status Serviço RedHat 7"
+  shell: systemctl status {{ service_name }} | grep Active | awk '{print $2}'
+  register: coleta_valor_previo
+  ignore_errors: yes
+  when:
+    - ansible_facts['distribution'] == "RedHat"
+    - ansible_facts['distribution_major_version'] == "7"
+
+- name: STATUS DO SERVICO ANTES DA AUTOMACAO
+  debug: msg="{{ coleta_valor_previo.stdout }}"
+
+- set_fact:
+    status_do_servico: "Service_Was_{{ coleta_valor_previo.stdout }}"
+  when:
+    - ansible_facts['distribution'] == "RedHat"
+    - ansible_facts['distribution_major_version'] == "7"
+    - coleta_valor_previo is defined and coleta_valor_previo.stdout == ""
+
+- set_fact:
+    status_do_servico: "Service_Not_Found"
+  when:
+    - ansible_facts['distribution'] == "RedHat"
+    - ansible_facts['distribution_major_version'] == "7"
+    - coleta_valor_previo is defined and coleta_valor_previo.stdout != ""
+
+- set_fact:
+    status_do_servico: "RH6"
+  when:
+    - ansible_facts['distribution'] == "RedHat"
+    - ansible_facts['distribution_major_version'] == "6"
+
+- name: "Realizar {{ service_action }} do serviço"
+  include_tasks:
+    file: "{{ service_action }}_service.yml"
+
+# -------------------------------------------------------------
+  rescue:
+# -------------------------------------------------------------
+
+- name: CRIA MENSAGEM DE FALHA
+  set_fact:
+    msg_result: "Ocorreu um erro durante a execução."
+
+- name: RETORNA MENSAGEM DE FALHA
+  debug:
+    msg: "{{ msg_result }}"
+
+...
